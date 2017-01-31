@@ -1,0 +1,33 @@
+{
+  "name": "docker-wallaby-db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "node ./dist/index.js",
+    "serve:watch": "nodemon ./dist/index.js --watch",
+    "migrate": "node ./dist/migrate.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.1",
+    "express": "^4.14.1",
+    "knex": "^0.12.6",
+    "lodash": "^4.17.4",
+    "pg": "^6.1.2"
+  },
+  "devDependencies": {
+    "@types/chai": "^3.4.34",
+    "@types/express": "^4.0.35",
+    "@types/knex": "0.0.40",
+    "@types/mocha": "^2.2.38",
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
+    "nodemon": "^1.11.0",
+    "typescript": "^2.1.5"
+  }
+}

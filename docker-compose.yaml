@@ -1,0 +1,49 @@
+version: "2"
+services:
+  db:
+    image: postgres:9.6.1
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+    ports:
+      - "5432:5432"
+  migrate:
+    image: node:6.4.0
+    command:
+      - "npm"
+      - "run"
+      - "migrate"
+    working_dir: "/mnt/data/app"
+    environment:
+      APP_DB_HOST: db
+      APP_DB_NAME: app
+      APP_DB_USER: appuser
+      APP_DB_PASSWORD: apppass
+    volumes:
+      - "./:/mnt/data/app"
+  serve:
+    image: node:6.4.0
+    ports:
+      - "80:80"
+    command:
+      - "npm"
+      - "run"
+      - "serve:watch"
+    working_dir: "/mnt/data/app"
+    environment:
+      APP_DB_HOST: db
+      APP_DB_NAME: app
+      APP_DB_USER: appuser
+      APP_DB_PASSWORD: apppass
+    volumes:
+      - "./:/mnt/data/app"
+  build:
+    image: node:6.4.0
+    command:
+      - "npm"
+      - "run"
+      - "build:watch"
+    working_dir: "/mnt/data/app"
+    volumes:
+      - "./:/mnt/data/app"
