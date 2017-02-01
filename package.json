@@ -18,6 +18,7 @@
     "express": "^4.14.1",
     "knex": "^0.12.6",
     "lodash": "^4.17.4",
+    "objection": "^0.6.2",
     "pg": "^6.1.2"
   },
   "devDependencies": {

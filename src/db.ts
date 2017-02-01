@@ -1,5 +1,6 @@
 import * as knex from 'knex';
 import * as path from 'path';
+import { Model } from 'objection';
 
 let db;
 
@@ -27,5 +28,7 @@ if (global['_wallabyWorker']) {
     }
   });
 }
+
+Model.knex(db);
 
 export { db };
