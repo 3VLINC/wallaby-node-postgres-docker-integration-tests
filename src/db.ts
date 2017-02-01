@@ -27,8 +27,9 @@ if (global['_wallabyWorker']) {
       directory: path.resolve(__dirname, './migrations'),
     }
   });
-}
 
-Model.knex(db);
+  Model.knex(db);
+
+}
 
 export { db };

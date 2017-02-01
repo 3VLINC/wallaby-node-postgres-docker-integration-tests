@@ -1,5 +1,5 @@
-import * as objection from 'objection';
 import { db } from './db';
+import * as objection from 'objection';
 import UserModel from './models/user.model';
 
 export class UsernameTakenError extends Error {
@@ -22,7 +22,7 @@ export class SampleComponent {
 
       const createdUser = await UserModel.query(trx).insert(user);
 
-      await createdUser.$relatedQuery('events').insert({name: 'My Event', role: 'eventDirector'});
+      await createdUser.$relatedQuery('events', trx).insert({name: 'My Event', role: 'eventDirector'});
 
       trx.commit();
 

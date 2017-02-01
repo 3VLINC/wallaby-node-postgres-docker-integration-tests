@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as readline from 'readline';
 import * as knex from 'knex';
 import { find, map } from 'lodash';
-import * as knexCleaner from 'knex-cleaner';
+import { Model } from 'objection';
 
 const config = {
   test_runner: 'wallaby',
@@ -205,7 +205,7 @@ export class Worker {
         port: this.dockerPort
     };
 
-    return knex({
+    const db = knex({
       client: 'pg',
       connection: knexConfig,
       searchPath: 'public',
@@ -215,6 +215,10 @@ export class Worker {
       },
       pool: { min: 0, max: 10 }
     });
+
+    Model.knex(db);
+
+    return db;
 
   }
 
@@ -319,15 +323,15 @@ export class Worker {
 
   private async migrate() {
     
-      try {
-      
-        return this.db.migrate.latest();
+    try {
+    
+      return this.db.migrate.latest();
 
-      } catch (e) {
+    } catch (e) {
 
-        console.log(e);
+      console.log(e);
 
-      }
+    }
 
   }
 
