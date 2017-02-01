@@ -2,7 +2,8 @@ import * as proc from 'child_process';
 import * as path from 'path';
 import * as readline from 'readline';
 import * as knex from 'knex';
-import { find } from 'lodash';
+import { find, map } from 'lodash';
+import * as knexCleaner from 'knex-cleaner';
 
 const config = {
   test_runner: 'wallaby',
@@ -42,32 +43,13 @@ export class Worker {
 
   }
 
-  get isSetup() {
-
-    
-    const result = find(global['_wallabyWorkers'], (worker: Worker) => {
-      
-      return worker.workerId === this.workerId;
-
-    });
-
-    if (result) {
-      
-      return true;
-
-    }
-
-    return false;
-
-  }
-
   get db() {
 
     return this._db;
 
   }
 
-  async stp() {
+  private async stp() {
 
     return new Promise(async (resolve, reject) => {
 
@@ -109,7 +91,7 @@ export class Worker {
 
   }
 
-  async rm() {
+  private async rm() {
 
     return new Promise(async (resolve, reject) => {
 
@@ -154,7 +136,7 @@ export class Worker {
 
   }
 
-  async create() {
+  private async create() {
 
     return new Promise(
       async(resolve, reject) => {
@@ -184,7 +166,7 @@ export class Worker {
 
   }
 
-  async start() {
+  private async start() {
 
     return new Promise(
       (resolve, reject) => {
@@ -193,103 +175,166 @@ export class Worker {
 
         const dockerProcess = spawn(`docker`, args);
 
-      const ref = readline.createInterface({
-        input     : dockerProcess.stdout
-      }).on('line', (line) => {
+        const ref = readline.createInterface({
+          input     : dockerProcess.stdout
+        }).on('line', async (line) => {
 
-        console.log(line);
+          console.log(line);
 
-        if(-1 !== line.indexOf('LOG:  database system is ready to accept connections')) {
-          
-          if (!global['_wallabyWorkers']) {
-          
-            global['_wallabyWorkers'] = [];
+          if(-1 !== line.indexOf('LOG:  database system is ready to accept connections')) {
+
+            ref.close();
+            
+            resolve(true);
 
           }
 
-          global['_wallabyWorkers'].push(this);
-          
-          ref.close();
-          
-          const knexConfig = {
-              host: 'localhost',
-              user: config.app_db_user,
-              password: config.app_db_password,
-              database: config.app_db_name,
-              port: this.dockerPort
-          };
-
-          this._db = knex({
-            client: 'pg',
-            connection: knexConfig,
-            searchPath: 'public',
-            migrations: {
-              tableName: 'migrations',
-              directory: path.resolve(__dirname, './../migrations'),
-            }
-          });
-          
-          resolve(true);
-
-        }
+        });
 
       });
 
+  }
+
+  private getDbConn() {
+
+    const knexConfig = {
+        host: 'localhost',
+        user: config.app_db_user,
+        password: config.app_db_password,
+        database: config.app_db_name,
+        port: this.dockerPort
+    };
+
+    return knex({
+      client: 'pg',
+      connection: knexConfig,
+      searchPath: 'public',
+      migrations: {
+        tableName: 'migrations',
+        directory: path.resolve(__dirname, './../migrations'),
+      },
+      pool: { min: 0, max: 10 }
     });
 
   }
 
-  async reset() {
+  private async initDb() {
 
-    // Do reset()
-    console.log('reset');
-    return Promise.resolve(true);
+    function destroy(db: knex) {
 
+      return new Promise((resolve, reject) => {
+
+        try {
+
+          db.destroy(() => {
+          
+            resolve();
+
+          });
+          
+        } catch(e) {
+
+          reject();
+
+        }        
+
+      });
+
+    }
+
+    const utilConn = this.getDbConn();
+
+    if (this._db) {
+
+      await utilConn.raw(`SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname='${config.app_db_name}' AND pid <> pg_backend_pid();`);
+
+    }
+
+    this._db = utilConn;
+    
   }
 
-  async migrateAttempt(db: knex, resolve: any, reject: any, retries = 0) {
-    
-    console.log(`Trying to connect: attempt ${retries}`);
+  private waitForConnection() {
 
-    try {
-    
-      const attempt = await db.migrate.latest();
+    async function retry(db, resolve, reject, retries = 0) {
 
-      return resolve(true);
+      try {
 
-    } catch (e) {
+        const result = await db.raw('select pg_backend_pid();');
 
-      console.log(e);
+        console.log('postgres pid is', result.rows[0].pg_backend_pid);
 
-      if (retries < 5) {
+        resolve();
 
-        setTimeout(
-          async () => {
-            return this.migrateAttempt(db, resolve, reject, (retries + 1))
-          },
-          1000
-        );
+      } catch(e) {
 
+        console.log(e);
+
+        if (retries < 10) {
+
+          setTimeout(
+            () => {
+              return retry(db, resolve, reject, (retries + 1))
+            },
+            1000
+          );
+
+        } else {
+          
+          reject('Connection couldnt be made after 10 retries');
+
+        }
+        
       }
 
     }
 
-  }
-
-  async migrate() {
-    
     return new Promise(async (resolve, reject) => {
-      
-      this.migrateAttempt(this._db, resolve, reject);
+
+      retry(this.db, resolve, reject);
 
     });
 
   }
 
-  async setup() {
+  private async clean() {
     
-    try {
+    // Do reset()
+
+    const result = await this.db.raw(`SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='public';`);
+
+    if (result.rows.length > 0) {
+
+      const tables = map(result.rows, (row: any) => {
+        
+        return row.tablename;
+
+      });
+
+      await this.db.raw('DROP TABLE IF EXISTS ' + tables.join(",") + ' CASCADE');
+
+    }  
+
+  }
+
+  private async migrate() {
+    
+      try {
       
+        return this.db.migrate.latest();
+
+      } catch (e) {
+
+        console.log(e);
+
+      }
+
+  }
+
+  public async setup() {
+
+    try {
+
       await this.stp();
 
       await this.rm();
@@ -298,16 +343,33 @@ export class Worker {
 
       await this.start();
 
-      await this.migrate();
-  
-      return Promise.resolve(true);
-
-    } catch(e) {
+    } catch (e) {
       
       console.log(e);
       return Promise.reject(e);
 
-    }    
+    } 
+
+  }
+
+  public async initialize() {
+
+    try {
+      
+      await this.initDb();
+
+      await this.waitForConnection();
+
+      await this.clean();
+
+      await this.migrate();
+
+    } catch (e) {
+
+      console.log(e);
+      return Promise.reject(e);
+
+    }
 
   }
 

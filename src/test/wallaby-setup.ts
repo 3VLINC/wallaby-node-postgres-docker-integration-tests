@@ -1,14 +1,17 @@
 import { Worker } from './worker';
+import { WorkerManager } from './worker-manager';
 
 export async function Setup(wallaby) {
 
   wallaby.delayStart();
 
-  const worker = new Worker(wallaby.workerId);
+  if (!global['_wallabyWorkerManager']) {
 
-  await worker.setup();
+    global['_wallabyWorkerManager'] = new WorkerManager();
 
-  global['_wallabyConfig'] = worker;
+  }
+
+  global['_wallabyWorker'] = await global['_wallabyWorkerManager'].handleWorker(wallaby.workerId);
 
   wallaby.start();
 

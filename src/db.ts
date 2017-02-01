@@ -3,9 +3,9 @@ import * as path from 'path';
 
 let db;
 
-if (global['_wallabyConfig']) {
+if (global['_wallabyWorker']) {
 
-  db = global['_wallabyConfig'].db;
+  db = global['_wallabyWorker'].db;
 
 } else {
 

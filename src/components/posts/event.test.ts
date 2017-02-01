@@ -13,10 +13,10 @@ describe('Event', () => {
 
   });
  
-  it('should insert a seatingPLan', async () => {
+  it('should insert a seatingPlan', async () => {
 
     const result = await EventComponent.createSeatingPlan('My Plan');
-
+    console.log(result);
     expect(result[0]).to.contain({name:'My Plan'});
     expect(result.length).to.eql(1);
 
