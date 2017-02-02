@@ -20,7 +20,11 @@ export class SampleComponent {
 
       if (foundUser) { throw new UsernameTakenError(user.username); }
 
-      const createdUser = await UserModel.query(trx).insert(user);
+      user.events = [
+        {name: 'My Event', role: 'eventDirector'}
+      ];
+      
+      const createdUser = await UserModel.query(trx).insertGraph(user);
 
       await createdUser.$relatedQuery('events', trx).insert({name: 'My Event', role: 'eventDirector'});
 

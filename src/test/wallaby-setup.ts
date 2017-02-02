@@ -11,7 +11,7 @@ export async function Setup(wallaby) {
 
   }
 
-  global['_wallabyWorker'] = await global['_wallabyWorkerManager'].handleWorker(wallaby.workerId);
+  global['_wallabyWorker'] = await global['_wallabyWorkerManager'].handleWorker(wallaby.workerId, wallaby.localProjectDir);
 
   wallaby.start();
 

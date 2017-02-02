@@ -21,7 +21,7 @@ export class Worker {
 
   private _db: knex;
 
-  constructor(private _workerId: number) {
+  constructor(private _workerId: number, private _path: string) {
 
   }
 
@@ -46,6 +46,12 @@ export class Worker {
   get db() {
 
     return this._db;
+
+  }
+
+  get path() {
+
+    return this._path;
 
   }
 
@@ -141,8 +147,14 @@ export class Worker {
     return new Promise(
       async(resolve, reject) => {
 
+        const mountdir = path.join(this.path, '/src/test/docker-entrypoint-initdb.d');
+
+        const volumeBind = `${mountdir}:/docker-entrypoint-initdb.d`;
+
+        console.log(`docker create --name ${this.dockerContainer} -p ${this.dockerPort}:5432 -e POSTGRES_DB=${config.app_db_name} -e POSTGRES_USER=${config.app_db_user} -e POSTGRES_PASSWORD=${config.app_db_password} -v "${volumeBind}" postgres:9.6.1`);
+        
         const dockerProcess = exec(
-          `docker create --name ${this.dockerContainer} -p ${this.dockerPort}:5432 -e POSTGRES_DB=${config.app_db_name} -e POSTGRES_USER=${config.app_db_user} -e POSTGRES_PASSWORD=${config.app_db_password} postgres:9.6.1`
+          `docker create --name ${this.dockerContainer} -p ${this.dockerPort}:5432 -e POSTGRES_DB=${config.app_db_name} -e POSTGRES_USER=${config.app_db_user} -e POSTGRES_PASSWORD=${config.app_db_password} -v "${volumeBind}" postgres:9.6.1`
         );
 
         readline.createInterface({
@@ -213,7 +225,7 @@ export class Worker {
         tableName: 'migrations',
         directory: path.resolve(__dirname, './../migrations'),
       },
-      pool: { min: 0, max: 10 }
+      pool: { min: 0, max: 1 }
     });
 
     Model.knex(db);
@@ -250,7 +262,7 @@ export class Worker {
 
     if (this._db) {
 
-      await utilConn.raw(`SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname='${config.app_db_name}' AND pid <> pg_backend_pid();`);
+      await utilConn.raw(`SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname='${config.app_db_name}' AND pid <> pg_backend_pid() AND usename = '${config.app_db_user}';`);
 
     }
 
@@ -304,20 +316,21 @@ export class Worker {
   private async clean() {
     
     // Do reset()
+    let query = `BEGIN;DROP SCHEMA public CASCADE;CREATE SCHEMA public;COMMIT;`;
 
-    const result = await this.db.raw(`SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='public';`);
+    // const result = await this.db.raw();
 
-    if (result.rows.length > 0) {
+    // if (result.rows.length > 0) {
 
-      const tables = map(result.rows, (row: any) => {
+    //   const tables = map(result.rows, (row: any) => {
         
-        return row.tablename;
+    //     return row.tablename;
 
-      });
+    //   });
 
-      await this.db.raw('DROP TABLE IF EXISTS ' + tables.join(",") + ' CASCADE');
+    //   await this.db.raw('DROP TABLE IF EXISTS ' + tables.join(",") + ' CASCADE');
 
-    }  
+    // }  
 
   }
 
@@ -364,9 +377,9 @@ export class Worker {
 
       await this.waitForConnection();
 
-      await this.clean();
+      // await this.clean();
 
-      await this.migrate();
+      // await this.migrate();
 
     } catch (e) {
 

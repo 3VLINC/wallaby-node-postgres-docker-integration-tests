@@ -19,13 +19,13 @@ export class WorkerManager {
 
   }
 
-  async handleWorker(workerId) {
+  async handleWorker(workerId: number, projectDir:string) {
 
     let worker = this.findWorker(workerId);
 
     if (isUndefined(worker)) {
       
-      worker = new Worker(workerId);
+      worker = new Worker(workerId, projectDir);
   
       await worker.setup();
 
