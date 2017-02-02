@@ -1,5 +1,6 @@
 import { Worker } from './worker';
 import { find, isUndefined } from 'lodash';
+import { config } from './config';
 
 export class WorkerManager {
 
@@ -19,13 +20,13 @@ export class WorkerManager {
 
   }
 
-  async handleWorker(workerId: number, projectDir:string) {
+  async handleWorker(workerId: number, projectDir:string, config: config) {
 
     let worker = this.findWorker(workerId);
 
     if (isUndefined(worker)) {
       
-      worker = new Worker(workerId, projectDir);
+      worker = new Worker(workerId, projectDir, config);
   
       await worker.setup();
 

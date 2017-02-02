@@ -22,7 +22,14 @@ module.exports = function (w) {
     },
     setup: function(wallaby) {
 
-      require(wallaby.projectCacheDir + '/src/test/wallaby-setup.js').Setup(wallaby);  
+      var config = {
+        app_db_host: 'localhost',
+        app_db_name: 'app',
+        app_db_user: 'appuser',
+        app_db_password: 'apppass'
+      }
+
+      require(wallaby.projectCacheDir + '/src/test/wallaby-setup.js').Setup(wallaby, config);  
 
     },
     teardown: function(wallaby) {

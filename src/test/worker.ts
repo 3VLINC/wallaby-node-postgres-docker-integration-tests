@@ -4,15 +4,7 @@ import * as readline from 'readline';
 import * as knex from 'knex';
 import { find, map } from 'lodash';
 import { Model } from 'objection';
-
-const config = {
-  test_runner: 'wallaby',
-  node_env: 'test',
-  app_db_host: 'localhost',
-  app_db_name: 'app',
-  app_db_user: 'appuser',
-  app_db_password: 'apppass'
-};
+import { config } from './config';
 
 const spawn = proc.spawn;
 const exec = proc.exec;
@@ -21,7 +13,7 @@ export class Worker {
 
   private _db: knex;
 
-  constructor(private _workerId: number, private _path: string) {
+  constructor(private _workerId: number, private _path: string, private _config: config) {
 
   }
 
@@ -52,6 +44,12 @@ export class Worker {
   get path() {
 
     return this._path;
+
+  }
+
+  get config() {
+
+    return this._config;
 
   }
 
@@ -150,11 +148,9 @@ export class Worker {
         const mountdir = path.join(this.path, '/src/test/docker-entrypoint-initdb.d');
 
         const volumeBind = `${mountdir}:/docker-entrypoint-initdb.d`;
-
-        console.log(`docker create --name ${this.dockerContainer} -p ${this.dockerPort}:5432 -e POSTGRES_DB=${config.app_db_name} -e POSTGRES_USER=${config.app_db_user} -e POSTGRES_PASSWORD=${config.app_db_password} -v "${volumeBind}" postgres:9.6.1`);
         
         const dockerProcess = exec(
-          `docker create --name ${this.dockerContainer} -p ${this.dockerPort}:5432 -e POSTGRES_DB=${config.app_db_name} -e POSTGRES_USER=${config.app_db_user} -e POSTGRES_PASSWORD=${config.app_db_password} -v "${volumeBind}" postgres:9.6.1`
+          `docker create --name ${this.dockerContainer} -p ${this.dockerPort}:5432 -e POSTGRES_DB=${this.config.app_db_name} -e POSTGRES_USER=${this.config.app_db_user} -e POSTGRES_PASSWORD=${this.config.app_db_password} -v "${volumeBind}" postgres:9.6.1`
         );
 
         readline.createInterface({
@@ -211,9 +207,9 @@ export class Worker {
 
     const knexConfig = {
         host: 'localhost',
-        user: config.app_db_user,
-        password: config.app_db_password,
-        database: config.app_db_name,
+        user: this.config.app_db_user,
+        password: this.config.app_db_password,
+        database: this.config.app_db_name,
         port: this.dockerPort
     };
 
@@ -262,7 +258,7 @@ export class Worker {
 
     if (this._db) {
 
-      await utilConn.raw(`SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname='${config.app_db_name}' AND pid <> pg_backend_pid() AND usename = '${config.app_db_user}';`);
+      await utilConn.raw(`SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname='${this.config.app_db_name}' AND pid <> pg_backend_pid() AND usename = '${this.config.app_db_user}';`);
 
     }
 
