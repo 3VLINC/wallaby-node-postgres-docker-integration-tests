@@ -69,11 +69,11 @@ describe('Sample', () => {
 
   it('should create a user and an event', async () => {
 
-    const result = await SampleComponent.createUser({ username: 'Dann', password: 'Password' });
+    const result = await SampleComponent.createUser({ username: 'Dan', password: 'Password' });
     console.log(result);
     const user = await UserModel.query().where({username: result.username }).eager('events');
     console.log(user);
-    expect(result).to.contain({username:'Dann'});
+    expect(result).to.contain({username:'Dan'});
     expect(user[0].events[0]).to.contain({name: 'My Event'});
 
   });

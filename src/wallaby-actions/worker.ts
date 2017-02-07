@@ -4,52 +4,37 @@ import * as readline from 'readline';
 import * as knex from 'knex';
 import { find, map } from 'lodash';
 import { Model } from 'objection';
-import { config } from './config';
+import { GenericWorker } from 'wallaby-worker-manager';
 
 const spawn = proc.spawn;
 const exec = proc.exec;
 
-export class Worker {
+export class Worker extends GenericWorker {
 
   private _db: knex;
+  private config = {
+      app_db_host: 'localhost',
+      app_db_name: 'app',
+      app_db_user: 'appuser',
+      app_db_password: 'apppass'
+    }
 
-  constructor(private _workerId: number, private _path: string, private _config: config) {
-
-  }
 
   get dockerContainer() {
 
-    return 'db-test-'+this._workerId;
+    return 'db-test-'+this.wallaby.workerId;
 
   }
 
   get dockerPort() {
 
-    return 5433 + this._workerId;
-
-  }
-
-  get workerId() {
-
-    return this._workerId;
+    return 5433 + this.wallaby.workerId;
 
   }
 
   get db() {
 
     return this._db;
-
-  }
-
-  get path() {
-
-    return this._path;
-
-  }
-
-  get config() {
-
-    return this._config;
 
   }
 
@@ -145,7 +130,7 @@ export class Worker {
     return new Promise(
       async(resolve, reject) => {
 
-        const mountdir = path.join(this.path, '/src/test/docker-entrypoint-initdb.d');
+        const mountdir = path.join(this.wallaby.localProjectDir, '/src/wallaby-actions/docker-entrypoint-initdb.d');
 
         const volumeBind = `${mountdir}:/docker-entrypoint-initdb.d`;
         
@@ -344,45 +329,23 @@ export class Worker {
 
   }
 
-  public async setup() {
+  public async onInit()  {
 
-    try {
+    await this.stp();
 
-      await this.stp();
+    await this.rm();
 
-      await this.rm();
+    await this.create();
 
-      await this.create();
-
-      await this.start();
-
-    } catch (e) {
-      
-      console.log(e);
-      return Promise.reject(e);
-
-    } 
+    await this.start();
 
   }
 
-  public async initialize() {
+  public async onEach() {
 
-    try {
-      
-      await this.initDb();
+    await this.initDb();
 
-      await this.waitForConnection();
-
-      // await this.clean();
-
-      // await this.migrate();
-
-    } catch (e) {
-
-      console.log(e);
-      return Promise.reject(e);
-
-    }
+    await this.waitForConnection();
 
   }
 

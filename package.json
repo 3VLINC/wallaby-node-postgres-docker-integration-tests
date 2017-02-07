@@ -30,6 +30,8 @@
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
-    "typescript": "^2.1.5"
+    "testdouble-chai": "^0.5.0",
+    "typescript": "^2.1.5",
+    "wallaby-worker-manager": "^0.1.4"
   }
 }
